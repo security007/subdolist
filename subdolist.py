@@ -44,7 +44,7 @@ class SubdomainScanner:
             req = session.get(f"https://{target}", headers=self.headers, verify=False,timeout=5)
             soup = bs(req.text, "html.parser")
             title = soup.title.string.strip() if soup.title else "No title"
-            print(f"[BRUTE] {target.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
+            print(f"[BRUTE] https://{target.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
         except KeyboardInterrupt:
             sys.exit()
         except requests.RequestException:
@@ -58,7 +58,7 @@ class SubdomainScanner:
             req = session.get(f"https://{domain}", headers=self.headers, verify=False,timeout=5)
             soup = bs(req.text, "html.parser")
             title = soup.title.string.strip() if soup.title else "No title"
-            print(f"[CRT.SH] {domain.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
+            print(f"[CRT.SH] https://{domain.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
         except KeyboardInterrupt:
             sys.exit()
         except requests.RequestException:
