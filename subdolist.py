@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import requests
 import concurrent.futures
 import re
@@ -20,20 +22,18 @@ class SubdomainScanner:
     def cert(self):
         clear_domain = []
         try:
-            req = requests.get(f"https://crt.sh/?q={self.domain}",headers=self.headers)
-        except KeyboardInterrupt:
-            sys.exit()
-        except:
-            req = None
-        
-        if req:
+            req = requests.get(f"https://crt.sh/?q={self.domain}", headers=self.headers)
             domains = re.findall(r'\b(?:\w+\.)+\w+\b', req.text)
             for domain in domains:
                 if "*" not in domain and domain not in clear_domain and self.domain in domain:
                     clear_domain.append(domain)
-        self.total_cert += len(clear_domain)
+            self.total_cert += len(clear_domain)
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            print(f"Error fetching certificate data: {e}")
+        
         return clear_domain
-
 
     def scan_subdomain(self, word):
         session = requests.Session()
@@ -41,26 +41,26 @@ class SubdomainScanner:
         target = f"{word}.{self.domain}"
         
         try:
-            req = session.get(f"https://{target}", headers=self.headers, verify=False,timeout=5)
+            req = session.get(f"https://{target}", headers=self.headers, verify=False, timeout=5)
             soup = bs(req.text, "html.parser")
             title = soup.title.string.strip() if soup.title else "No title"
             print(f"[BRUTE] https://{target.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
         except KeyboardInterrupt:
-            sys.exit()
+            raise
         except requests.RequestException:
             pass
         self.completed += 1
         print(f":: Bruteforcing :: {self.completed}/{self.total_words} ::", end="\r", flush=True)
 
-    def scan_form_cert(self,domain):
+    def scan_form_cert(self, domain):
         session = requests.Session()
         try:
-            req = session.get(f"https://{domain}", headers=self.headers, verify=False,timeout=5)
+            req = session.get(f"https://{domain}", headers=self.headers, verify=False, timeout=5)
             soup = bs(req.text, "html.parser")
             title = soup.title.string.strip() if soup.title else "No title"
             print(f"[CRT.SH] https://{domain.ljust(50)} :: Code: {req.status_code} :: Title: {title}")
         except KeyboardInterrupt:
-            sys.exit()
+            raise
         except requests.RequestException:
             pass
         self.completed_cert += 1
@@ -74,7 +74,8 @@ class SubdomainScanner:
             with concurrent.futures.ThreadPoolExecutor(max_workers=100) as pool:
                 pool.map(self.scan_form_cert, cert)
         except KeyboardInterrupt:
-            sys.exit()
+            print("[-] Stopping... Exiting ThreadPool.")
+            return
 
         print("\n")
         print(":: Checking from Wordlist ::")
@@ -82,15 +83,16 @@ class SubdomainScanner:
             with concurrent.futures.ThreadPoolExecutor(max_workers=100) as pool:
                 pool.map(self.scan_subdomain, self.wordlist)
         except KeyboardInterrupt:
-            sys.exit()
+            print("[-] Stopping... Exiting ThreadPool.")
+            return
 
-            
 
 if __name__ == "__main__":
     try:
-        scanner = SubdomainScanner(sys.argv[1], "list.txt")
+        scanner = SubdomainScanner(sys.argv[1], "subdo.txt")
         scanner.run()
     except KeyboardInterrupt:
+        print("[-] Stopping... Exiting.")
         sys.exit()
     except IndexError:
         sys.exit("Usage: python subdolist.py domain.com")
